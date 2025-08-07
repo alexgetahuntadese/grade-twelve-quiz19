@@ -221,7 +221,6 @@ const QuizPage = () => {
   const [revealedAnswers, setRevealedAnswers] = useState<Set<number>>(new Set());
   const [timedOutQuestions, setTimedOutQuestions] = useState<Set<number>>(new Set());
   const [showTimeUp, setShowTimeUp] = useState<boolean>(false);
-  const [powerUps, setPowerUps] = useState<number>(3);
   const [showReview, setShowReview] = useState<boolean>(false);
 
   const adaptiveTime = difficulty ? getAdaptiveTime(difficulty) : 20;
@@ -280,7 +279,6 @@ const QuizPage = () => {
         setError(null);
         setTimedOutQuestions(new Set());
         setShowTimeUp(false);
-        setPowerUps(3);
         setShowReview(false);
         // Timer will be reset via useEffect
       } else {
@@ -334,12 +332,6 @@ const QuizPage = () => {
     setRevealedAnswers(prev => new Set([...prev, currentQuestionIndex]));
   };
 
-  const handleUsePowerUp = () => {
-    if (powerUps > 0) {
-      setPowerUps(prev => prev - 1);
-      timerControls.resetTimer(timerControls.timeLeft + 10);
-    }
-  };
 
   const handleNextQuestion = () => {
     console.log('Next question clicked, current index:', currentQuestionIndex, 'total:', questions.length);
@@ -571,8 +563,6 @@ const QuizPage = () => {
             totalTime={adaptiveTime}
             progressPercentage={timerControls.getProgressPercentage()}
             showTimeUp={showTimeUp}
-            powerUps={powerUps}
-            onUsePowerUp={handleUsePowerUp}
           />
           
           <QuestionCard
