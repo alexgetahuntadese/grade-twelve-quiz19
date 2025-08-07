@@ -21,6 +21,10 @@ interface ResultsProps {
   onRetakeQuiz: () => void;
   questions: Question[];
   selectedAnswers: { [key: number]: string };
+  timedOutQuestions?: Set<number>;
+  revealedAnswers?: Set<number>;
+  showReview?: boolean;
+  onShowReview?: () => void;
 }
 
 const Results = ({ 
@@ -29,7 +33,9 @@ const Results = ({
   timeTaken, 
   onRetakeQuiz, 
   questions, 
-  selectedAnswers 
+  selectedAnswers,
+  timedOutQuestions = new Set(),
+  revealedAnswers = new Set()
 }: ResultsProps) => {
   const navigate = useNavigate();
   const params = useParams();
@@ -113,6 +119,15 @@ const Results = ({
         {questions.map((question, index) => {
           const userAnswer = selectedAnswers[index];
           const isCorrect = userAnswer === question.correct;
+          const isTimedOut = timedOutQuestions.has(index);
+          const wasRevealed = revealedAnswers.has(index);
+          
+          const getStatusIcon = () => {
+            if (isTimedOut) return <Clock className="h-6 w-6 text-orange-500" />;
+            if (wasRevealed) return <Badge className="bg-purple-500 text-white text-xs">Revealed</Badge>;
+            if (isCorrect) return <CheckCircle className="h-6 w-6 text-green-500" />;
+            return <XCircle className="h-6 w-6 text-red-500" />;
+          };
           
           return (
             <Card key={question.id} className="bg-white/5 border-white/20 text-white">
@@ -121,11 +136,7 @@ const Results = ({
                   <Badge variant="secondary" className="bg-gray-600 text-white">
                     Question {index + 1}
                   </Badge>
-                  {isCorrect ? (
-                    <CheckCircle className="h-6 w-6 text-green-500" />
-                  ) : (
-                    <XCircle className="h-6 w-6 text-red-500" />
-                  )}
+                  {getStatusIcon()}
                 </div>
                 <CardTitle className="text-lg font-medium text-white">
                   {question.question}
@@ -157,6 +168,13 @@ const Results = ({
                     </Button>
                   );
                 })}
+                
+                {isTimedOut && (
+                  <div className="mt-4 p-4 bg-orange-900/30 border border-orange-500/30 rounded-lg">
+                    <h4 className="font-semibold text-orange-300 mb-2">⏰ Time Expired:</h4>
+                    <p className="text-gray-300">You ran out of time on this question. The correct answer was: <strong>{question.correct}</strong></p>
+                  </div>
+                )}
                 
                 {question.explanation && (
                   <div className="mt-4 p-4 bg-blue-900/30 border border-blue-500/30 rounded-lg">

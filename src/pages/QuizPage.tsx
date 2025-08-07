@@ -17,9 +17,13 @@ import { getGrade11ChemistryQuestions } from '@/data/grade11Chemistry';
 import { getGrade11AgricultureQuestions } from '@/data/grade11AgricultureQuestions';
 import QuestionCard from '@/components/QuestionCard';
 import Results from '@/components/Results';
+import TimerBar from '@/components/TimerBar';
+import QuestionReview from '@/components/QuestionReview';
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Eye } from 'lucide-react';
+import { ArrowLeft, Eye, RotateCcw } from 'lucide-react';
+import { useQuizTimer } from '@/hooks/useQuizTimer';
+import { useAudioAlert } from '@/hooks/useAudioAlert';
 
 interface Question {
   id: string;
@@ -28,6 +32,16 @@ interface Question {
   correct: string;
   explanation: string;
 }
+
+// Adaptive timing based on difficulty
+const getAdaptiveTime = (difficulty: string): number => {
+  switch (difficulty.toLowerCase()) {
+    case 'easy': return 30;
+    case 'medium': return 20;
+    case 'hard': return 15;
+    default: return 20;
+  }
+};
 
 const getQuestionsForSubject = (subject: string, chapter: string, difficulty: string, grade: string, count: number = 10): Question[] => {
   let allQuestions: any[] = [];
@@ -205,9 +219,44 @@ const QuizPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [showAnswerForQuestion, setShowAnswerForQuestion] = useState<number | null>(null);
   const [revealedAnswers, setRevealedAnswers] = useState<Set<number>>(new Set());
-  const [questionTimer, setQuestionTimer] = useState<number>(20);
   const [timedOutQuestions, setTimedOutQuestions] = useState<Set<number>>(new Set());
   const [showTimeUp, setShowTimeUp] = useState<boolean>(false);
+  const [powerUps, setPowerUps] = useState<number>(3);
+  const [showReview, setShowReview] = useState<boolean>(false);
+
+  const adaptiveTime = difficulty ? getAdaptiveTime(difficulty) : 20;
+  const { playBeep, playTimeUpSound } = useAudioAlert();
+
+  // Timer hooks
+  const handleTimeUp = () => {
+    setShowTimeUp(true);
+    setTimedOutQuestions(prev => new Set([...prev, currentQuestionIndex]));
+    playTimeUpSound();
+    
+    setTimeout(() => {
+      setShowTimeUp(false);
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
+        timerControls.resetTimer(adaptiveTime);
+        setShowAnswerForQuestion(null);
+      } else {
+        setShowResults(true);
+      }
+    }, 1500);
+  };
+
+  const handleLastFiveSeconds = () => {
+    playBeep();
+  };
+
+  const timerControls = useQuizTimer({
+    initialTime: adaptiveTime,
+    onTimeUp: handleTimeUp,
+    onLastFiveSeconds: handleLastFiveSeconds,
+    isActive: !showResults && !isLoading && questions.length > 0 && 
+              !revealedAnswers.has(currentQuestionIndex) && 
+              !selectedAnswers[currentQuestionIndex] && !showTimeUp
+  });
 
   const initializeQuestions = () => {
     console.log('Initializing questions with params:', { subject, chapterId, difficulty, grade });
@@ -230,9 +279,11 @@ const QuizPage = () => {
         setStartTime(Date.now());
         setElapsedTime(0);
         setError(null);
-        setQuestionTimer(20);
         setTimedOutQuestions(new Set());
         setShowTimeUp(false);
+        setPowerUps(3);
+        setShowReview(false);
+        timerControls.resetTimer(adaptiveTime);
       } else {
         console.error('No questions found for:', { subject, chapter: chapterId, difficulty, grade });
         setError(`No questions available for Grade ${grade} ${subject} - ${chapterId} (${difficulty} level)`);
@@ -250,42 +301,6 @@ const QuizPage = () => {
   useEffect(() => {
     initializeQuestions();
   }, [subject, chapterId, difficulty]);
-
-  // Question timer countdown effect
-  useEffect(() => {
-    let questionTimerInterval: NodeJS.Timeout;
-
-    if (!showResults && !isLoading && questions.length > 0 && !revealedAnswers.has(currentQuestionIndex) && !selectedAnswers[currentQuestionIndex]) {
-      questionTimerInterval = setInterval(() => {
-        setQuestionTimer(prev => {
-          if (prev <= 1) {
-            // Time's up!
-            setShowTimeUp(true);
-            setTimedOutQuestions(prev => new Set([...prev, currentQuestionIndex]));
-            
-            // Auto advance after showing "Time's up!" for 1.5 seconds
-            setTimeout(() => {
-              setShowTimeUp(false);
-              if (currentQuestionIndex < questions.length - 1) {
-                setCurrentQuestionIndex(currentQuestionIndex + 1);
-                setQuestionTimer(20);
-                setShowAnswerForQuestion(null);
-              } else {
-                setShowResults(true);
-              }
-            }, 1500);
-            
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-
-    return () => {
-      if (questionTimerInterval) clearInterval(questionTimerInterval);
-    };
-  }, [currentQuestionIndex, showResults, isLoading, questions.length, revealedAnswers, selectedAnswers]);
 
   // Quiz overall timer effect
   useEffect(() => {
@@ -305,7 +320,7 @@ const QuizPage = () => {
   // Reset question timer when question changes
   useEffect(() => {
     if (!showResults && questions.length > 0) {
-      setQuestionTimer(20);
+      timerControls.resetTimer(adaptiveTime);
       setShowTimeUp(false);
     }
   }, [currentQuestionIndex, showResults]);
@@ -319,6 +334,13 @@ const QuizPage = () => {
     console.log('Show answer clicked for question index:', currentQuestionIndex);
     setShowAnswerForQuestion(currentQuestionIndex);
     setRevealedAnswers(prev => new Set([...prev, currentQuestionIndex]));
+  };
+
+  const handleUsePowerUp = () => {
+    if (powerUps > 0) {
+      setPowerUps(prev => prev - 1);
+      timerControls.resetTimer(timerControls.timeLeft + 10);
+    }
   };
 
   const handleNextQuestion = () => {
@@ -354,6 +376,7 @@ const QuizPage = () => {
   const handleRetakeQuiz = () => {
     setShowAnswerForQuestion(null);
     setRevealedAnswers(new Set());
+    setShowReview(false);
     initializeQuestions();
   };
 
@@ -540,6 +563,8 @@ const QuizPage = () => {
           onRetakeQuiz={handleRetakeQuiz}
           questions={questions}
           selectedAnswers={selectedAnswers}
+          timedOutQuestions={timedOutQuestions}
+          revealedAnswers={revealedAnswers}
         />
       ) : (
         <div className="space-y-6">
@@ -547,24 +572,16 @@ const QuizPage = () => {
             <p className="text-gray-300">
               Time Elapsed: <span className="font-bold text-white">{formatTime(elapsedTime)}</span>
             </p>
-            <div className="text-center">
-              {showTimeUp ? (
-                <div className="text-red-400 text-xl font-bold animate-pulse">
-                  ⏰ Time's up!
-                </div>
-              ) : (
-                <div className="text-center">
-                  <div className="text-sm text-gray-400 mb-1">Question Timer</div>
-                  <div className={`text-2xl font-bold ${
-                    questionTimer <= 5 ? 'text-red-400 animate-pulse' : 
-                    questionTimer <= 10 ? 'text-yellow-400' : 'text-green-400'
-                  }`}>
-                    {questionTimer}s
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
+
+          <TimerBar
+            timeLeft={timerControls.timeLeft}
+            totalTime={adaptiveTime}
+            progressPercentage={timerControls.getProgressPercentage()}
+            showTimeUp={showTimeUp}
+            powerUps={powerUps}
+            onUsePowerUp={handleUsePowerUp}
+          />
           
           <QuestionCard
             question={currentQuestion}
