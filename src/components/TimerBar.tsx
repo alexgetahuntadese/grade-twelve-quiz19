@@ -19,21 +19,26 @@ const TimerBar: React.FC<TimerBarProps> = ({
   onUsePowerUp
 }) => {
   const getTimerColor = () => {
-    if (timeLeft <= 5) return 'bg-red-500';
-    if (timeLeft <= 10) return 'bg-yellow-500';
-    return 'bg-green-500';
+    if (timeLeft <= 5) return 'from-danger to-danger/80';
+    if (timeLeft <= 10) return 'from-warning to-warning/80';
+    return 'from-success to-success-glow';
   };
 
   const getTimerGlow = () => {
-    if (timeLeft <= 5) return 'shadow-red-500/50';
-    if (timeLeft <= 10) return 'shadow-yellow-500/50';
-    return 'shadow-green-500/50';
+    if (timeLeft <= 5) return 'shadow-danger';
+    if (timeLeft <= 10) return 'shadow-lg shadow-warning/30';
+    return 'shadow-success';
+  };
+
+  const getContainerClasses = () => {
+    if (timeLeft <= 5) return 'animate-timer-warning';
+    return '';
   };
 
   if (showTimeUp) {
     return (
       <div className="text-center animate-scale-in">
-        <div className="text-red-400 text-2xl font-bold animate-pulse mb-2">
+        <div className="bg-gradient-danger text-white text-2xl font-bold py-4 px-8 rounded-xl shadow-danger animate-pulse mb-4">
           ⏰ Time's up!
         </div>
       </div>
@@ -41,37 +46,46 @@ const TimerBar: React.FC<TimerBarProps> = ({
   }
 
   return (
-    <div className="space-y-4">
+    <div className={`space-y-6 ${getContainerClasses()}`}>
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <Clock className="w-5 h-5 text-primary" />
-          <span className="text-sm text-muted-foreground">Question Timer</span>
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-gradient-primary rounded-lg shadow-glow">
+            <Clock className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-lg font-medium text-foreground">Question Timer</span>
         </div>
         
         {powerUps > 0 && (
           <button
             onClick={onUsePowerUp}
-            className="flex items-center gap-1 px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg transition-colors"
+            className="group flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-secondary to-secondary/80 hover:from-secondary/90 hover:to-secondary text-white text-sm font-medium rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-glow"
           >
-            <Zap className="w-4 h-4" />
-            +10s ({powerUps})
+            <Zap className="w-4 h-4 group-hover:animate-pulse" />
+            <span>+10s</span>
+            <div className="bg-white/20 px-2 py-1 rounded-lg text-xs">
+              {powerUps}
+            </div>
           </button>
         )}
       </div>
 
-      <div className="relative">
-        <div className="w-full h-4 bg-secondary rounded-full overflow-hidden">
+      <div className="relative p-1 bg-gradient-to-r from-muted to-muted/50 rounded-2xl">
+        <div className="relative h-6 bg-background rounded-xl overflow-hidden">
           <div 
-            className={`h-full transition-all duration-1000 ease-linear ${getTimerColor()} ${
-              timeLeft <= 5 ? 'animate-pulse' : ''
-            }`}
+            className={`h-full bg-gradient-to-r ${getTimerColor()} transition-all duration-1000 ease-linear relative overflow-hidden ${getTimerGlow()}`}
             style={{ width: `${progressPercentage}%` }}
-          />
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
+          </div>
         </div>
         
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className={`text-xs font-bold ${
-            timeLeft <= 5 ? 'text-white animate-pulse' : 'text-foreground'
+          <span className={`text-sm font-bold transition-all duration-300 ${
+            timeLeft <= 5 
+              ? 'text-white text-base animate-pulse drop-shadow-lg' 
+              : timeLeft <= 10 
+                ? 'text-foreground font-bold' 
+                : 'text-foreground'
           }`}>
             {timeLeft}s
           </span>
@@ -79,7 +93,7 @@ const TimerBar: React.FC<TimerBarProps> = ({
       </div>
 
       {timeLeft <= 5 && (
-        <div className={`w-full h-1 bg-red-500 rounded-full animate-pulse shadow-lg ${getTimerGlow()}`} />
+        <div className="h-2 bg-gradient-danger rounded-full animate-pulse shadow-danger" />
       )}
     </div>
   );
