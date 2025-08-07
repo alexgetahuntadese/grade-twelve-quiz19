@@ -237,7 +237,6 @@ const QuizPage = () => {
       setShowTimeUp(false);
       if (currentQuestionIndex < questions.length - 1) {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
-        timerControls.resetTimer(adaptiveTime);
         setShowAnswerForQuestion(null);
       } else {
         setShowResults(true);
@@ -283,7 +282,7 @@ const QuizPage = () => {
         setShowTimeUp(false);
         setPowerUps(3);
         setShowReview(false);
-        timerControls.resetTimer(adaptiveTime);
+        // Timer will be reset via useEffect
       } else {
         console.error('No questions found for:', { subject, chapter: chapterId, difficulty, grade });
         setError(`No questions available for Grade ${grade} ${subject} - ${chapterId} (${difficulty} level)`);
@@ -320,7 +319,6 @@ const QuizPage = () => {
   // Reset question timer when question changes
   useEffect(() => {
     if (!showResults && questions.length > 0) {
-      timerControls.resetTimer(adaptiveTime);
       setShowTimeUp(false);
     }
   }, [currentQuestionIndex, showResults]);
