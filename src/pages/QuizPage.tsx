@@ -566,12 +566,6 @@ const QuizPage = () => {
         />
       ) : (
         <div className="space-y-6">
-          <div className="flex justify-between items-center mb-4">
-            <p className="text-gray-300">
-              Time Elapsed: <span className="font-bold text-white">{formatTime(elapsedTime)}</span>
-            </p>
-          </div>
-
           <TimerBar
             timeLeft={timerControls.timeLeft}
             totalTime={adaptiveTime}
