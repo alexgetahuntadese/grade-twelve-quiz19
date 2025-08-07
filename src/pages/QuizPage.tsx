@@ -200,7 +200,6 @@ const QuizPage = () => {
   const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: string }>({});
   const [showResults, setShowResults] = useState<boolean>(false);
   const [startTime, setStartTime] = useState<number>(0);
-  const [elapsedTime, setElapsedTime] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [showAnswerForQuestion, setShowAnswerForQuestion] = useState<number | null>(null);
@@ -228,7 +227,6 @@ const QuizPage = () => {
         setSelectedAnswers({});
         setShowResults(false);
         setStartTime(Date.now());
-        setElapsedTime(0);
         setError(null);
         setQuestionTimer(20);
         setTimedOutQuestions(new Set());
@@ -287,20 +285,6 @@ const QuizPage = () => {
     };
   }, [currentQuestionIndex, showResults, isLoading, questions.length, revealedAnswers, selectedAnswers]);
 
-  // Quiz overall timer effect
-  useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-
-    if (!showResults && !isLoading && startTime > 0 && questions.length > 0) {
-      intervalId = setInterval(() => {
-        setElapsedTime(Date.now() - startTime);
-      }, 100);
-    }
-
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [showResults, startTime, isLoading, questions.length]);
 
   // Reset question timer when question changes
   useEffect(() => {
@@ -342,14 +326,6 @@ const QuizPage = () => {
     return correctAnswersCount;
   };
 
-  const formatTime = (ms: number): string => {
-    const totalSeconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    const milliseconds = Math.floor((ms % 1000) / 10);
-  
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}:${milliseconds.toString().padStart(2, '0')}`;
-  };
 
   const handleRetakeQuiz = () => {
     setShowAnswerForQuestion(null);
@@ -536,17 +512,14 @@ const QuizPage = () => {
         <Results 
           score={calculateScore()} 
           totalQuestions={questions.length} 
-          timeTaken={formatTime(elapsedTime)}
+          timeTaken="Quiz completed"
           onRetakeQuiz={handleRetakeQuiz}
           questions={questions}
           selectedAnswers={selectedAnswers}
         />
       ) : (
         <div className="space-y-6">
-          <div className="flex justify-between items-center mb-4">
-            <p className="text-gray-300">
-              Time Elapsed: <span className="font-bold text-white">{formatTime(elapsedTime)}</span>
-            </p>
+          <div className="flex justify-center items-center mb-4">
             <div className="text-center">
               {showTimeUp ? (
                 <div className="text-red-400 text-xl font-bold animate-pulse">
