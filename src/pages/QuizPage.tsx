@@ -205,6 +205,9 @@ const QuizPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [showAnswerForQuestion, setShowAnswerForQuestion] = useState<number | null>(null);
   const [revealedAnswers, setRevealedAnswers] = useState<Set<number>>(new Set());
+  const [questionTimer, setQuestionTimer] = useState<number>(20);
+  const [timedOutQuestions, setTimedOutQuestions] = useState<Set<number>>(new Set());
+  const [showTimeUp, setShowTimeUp] = useState<boolean>(false);
 
   const initializeQuestions = () => {
     console.log('Initializing questions with params:', { subject, chapterId, difficulty, grade });
@@ -227,6 +230,9 @@ const QuizPage = () => {
         setStartTime(Date.now());
         setElapsedTime(0);
         setError(null);
+        setQuestionTimer(20);
+        setTimedOutQuestions(new Set());
+        setShowTimeUp(false);
       } else {
         console.error('No questions found for:', { subject, chapter: chapterId, difficulty, grade });
         setError(`No questions available for Grade ${grade} ${subject} - ${chapterId} (${difficulty} level)`);
@@ -245,6 +251,43 @@ const QuizPage = () => {
     initializeQuestions();
   }, [subject, chapterId, difficulty]);
 
+  // Question timer countdown effect
+  useEffect(() => {
+    let questionTimerInterval: NodeJS.Timeout;
+
+    if (!showResults && !isLoading && questions.length > 0 && !revealedAnswers.has(currentQuestionIndex) && !selectedAnswers[currentQuestionIndex]) {
+      questionTimerInterval = setInterval(() => {
+        setQuestionTimer(prev => {
+          if (prev <= 1) {
+            // Time's up!
+            setShowTimeUp(true);
+            setTimedOutQuestions(prev => new Set([...prev, currentQuestionIndex]));
+            
+            // Auto advance after showing "Time's up!" for 1.5 seconds
+            setTimeout(() => {
+              setShowTimeUp(false);
+              if (currentQuestionIndex < questions.length - 1) {
+                setCurrentQuestionIndex(currentQuestionIndex + 1);
+                setQuestionTimer(20);
+                setShowAnswerForQuestion(null);
+              } else {
+                setShowResults(true);
+              }
+            }, 1500);
+            
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (questionTimerInterval) clearInterval(questionTimerInterval);
+    };
+  }, [currentQuestionIndex, showResults, isLoading, questions.length, revealedAnswers, selectedAnswers]);
+
+  // Quiz overall timer effect
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
 
@@ -258,6 +301,14 @@ const QuizPage = () => {
       if (intervalId) clearInterval(intervalId);
     };
   }, [showResults, startTime, isLoading, questions.length]);
+
+  // Reset question timer when question changes
+  useEffect(() => {
+    if (!showResults && questions.length > 0) {
+      setQuestionTimer(20);
+      setShowTimeUp(false);
+    }
+  }, [currentQuestionIndex, showResults]);
 
   const handleAnswerSelect = (answer: string) => {
     console.log('Answer selected:', answer, 'for question index:', currentQuestionIndex);
@@ -492,9 +543,28 @@ const QuizPage = () => {
         />
       ) : (
         <div className="space-y-6">
-          <p className="text-gray-300 mb-2">
-            Time Elapsed: <span className="font-bold text-white">{formatTime(elapsedTime)}</span>
-          </p>
+          <div className="flex justify-between items-center mb-4">
+            <p className="text-gray-300">
+              Time Elapsed: <span className="font-bold text-white">{formatTime(elapsedTime)}</span>
+            </p>
+            <div className="text-center">
+              {showTimeUp ? (
+                <div className="text-red-400 text-xl font-bold animate-pulse">
+                  ⏰ Time's up!
+                </div>
+              ) : (
+                <div className="text-center">
+                  <div className="text-sm text-gray-400 mb-1">Question Timer</div>
+                  <div className={`text-2xl font-bold ${
+                    questionTimer <= 5 ? 'text-red-400 animate-pulse' : 
+                    questionTimer <= 10 ? 'text-yellow-400' : 'text-green-400'
+                  }`}>
+                    {questionTimer}s
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
           
           <QuestionCard
             question={currentQuestion}
