@@ -5,9 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, BookOpen } from 'lucide-react';
+import { ArrowLeft, BookOpen, CheckCircle, Mail, RefreshCw } from 'lucide-react';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -15,6 +16,8 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const { user, signIn, signUp } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -44,8 +47,9 @@ export default function AuthPage() {
           variant: 'destructive',
         });
       } else if (!isLogin) {
+        setShowEmailConfirmation(true);
         toast({
-          title: 'Success!',
+          title: 'Account Created!',
           description: 'Please check your email to confirm your account.',
         });
       }
@@ -64,11 +68,48 @@ export default function AuthPage() {
     setEmail('');
     setPassword('');
     setDisplayName('');
+    setShowEmailConfirmation(false);
   };
 
   const switchMode = () => {
     setIsLogin(!isLogin);
     resetForm();
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!email) {
+      toast({
+        title: 'Error',
+        description: 'Please enter your email address',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setResendLoading(true);
+    try {
+      const { error } = await signUp(email, password, displayName);
+      if (error) {
+        toast({
+          title: 'Error',
+          description: error.message,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Email Sent!',
+          description: 'A new confirmation email has been sent to your inbox.',
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to resend confirmation email',
+        variant: 'destructive',
+      });
+    } finally {
+      setResendLoading(false);
+    }
   };
 
   return (
@@ -95,62 +136,118 @@ export default function AuthPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {!isLogin && (
-                <div className="space-y-2">
-                  <Label htmlFor="displayName">Display Name</Label>
-                  <Input
-                    id="displayName"
-                    type="text"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="Enter your display name"
-                    required={!isLogin}
-                  />
+            {showEmailConfirmation && !isLogin ? (
+              <div className="space-y-4">
+                <Alert className="border-green-200 bg-green-50 text-green-800">
+                  <CheckCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <div className="space-y-2">
+                      <p className="font-medium">Account created successfully!</p>
+                      <p className="text-sm">
+                        We've sent a confirmation email to <span className="font-medium">{email}</span>. 
+                        Please check your inbox and click the confirmation link to activate your account.
+                      </p>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+
+                <div className="bg-muted/50 p-4 rounded-lg space-y-3">
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                    <Mail className="h-4 w-4" />
+                    <span>Didn't receive the email?</span>
+                  </div>
+                  <ul className="text-sm text-muted-foreground space-y-1 ml-6">
+                    <li>• Check your spam/junk folder</li>
+                    <li>• Wait a few minutes for delivery</li>
+                    <li>• Make sure you entered the correct email address</li>
+                  </ul>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleResendConfirmation}
+                    disabled={resendLoading}
+                    className="w-full"
+                  >
+                    {resendLoading ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="h-4 w-4 mr-2" />
+                        Resend Confirmation Email
+                      </>
+                    )}
+                  </Button>
                 </div>
-              )}
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
-                  required
-                />
+                <div className="text-center pt-4">
+                  <Button variant="link" onClick={switchMode} className="text-sm">
+                    Back to Sign In
+                  </Button>
+                </div>
               </div>
+            ) : (
+              <>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {!isLogin && (
+                    <div className="space-y-2">
+                      <Label htmlFor="displayName">Display Name</Label>
+                      <Input
+                        id="displayName"
+                        type="text"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        placeholder="Enter your display name"
+                        required={!isLogin}
+                      />
+                    </div>
+                  )}
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  required
-                  minLength={6}
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Enter your email"
+                      required
+                    />
+                  </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Create Account')}
-              </Button>
-            </form>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      required
+                      minLength={6}
+                    />
+                  </div>
 
-            <div className="mt-6">
-              <Separator className="my-4" />
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">
-                  {isLogin ? "Don't have an account?" : 'Already have an account?'}
-                </p>
-                <Button variant="link" onClick={switchMode} className="p-0 h-auto">
-                  {isLogin ? 'Create one here' : 'Sign in here'}
-                </Button>
-              </div>
-            </div>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Create Account')}
+                  </Button>
+                </form>
+
+                <div className="mt-6">
+                  <Separator className="my-4" />
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground">
+                      {isLogin ? "Don't have an account?" : 'Already have an account?'}
+                    </p>
+                    <Button variant="link" onClick={switchMode} className="p-0 h-auto">
+                      {isLogin ? 'Create one here' : 'Sign in here'}
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
