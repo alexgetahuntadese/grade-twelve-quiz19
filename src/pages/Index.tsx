@@ -2,17 +2,46 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
+import UserMenu from "@/components/UserMenu";
+import { BookOpen } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-purple-800 to-indigo-700">
-      <div className="w-full max-w-4xl">
-        <div className="text-center mb-12">
-          <h1 className="text-6xl font-bold text-white mb-4 opacity-0 animate-fade-in">
-            EthioQuiz 2050
-          </h1>
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-900 via-purple-800 to-indigo-700">
+      {/* Header */}
+      <header className="w-full p-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <BookOpen className="h-8 w-8 text-white" />
+            <h1 className="text-xl font-bold text-white">MindSprint</h1>
+          </div>
+          <div className="flex items-center space-x-4">
+            {user ? (
+              <UserMenu />
+            ) : (
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/auth')}
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+              >
+                Sign In
+              </Button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-4xl">
+          <div className="text-center mb-12">
+            <h1 className="text-6xl font-bold text-white mb-4 opacity-0 animate-fade-in">
+              MindSprint
+            </h1>
           <p className="text-xl text-blue-100 mb-8 opacity-0 animate-fade-in [animation-delay:0.2s]">
             Advanced Learning Platform for Ethiopian Students
           </p>
@@ -30,12 +59,23 @@ const Index = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button 
-                onClick={() => navigate('/grades')}
-                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-3 shadow-lg transform hover:scale-105 transition-all duration-200"
-              >
-                Browse Quizzes
-              </Button>
+              <div className="space-y-3">
+                <Button 
+                  onClick={() => navigate('/grades')}
+                  className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-3 shadow-lg transform hover:scale-105 transition-all duration-200"
+                >
+                  Browse Quizzes
+                </Button>
+                {!user && (
+                  <Button 
+                    variant="outline"
+                    onClick={() => navigate('/auth')}
+                    className="w-full bg-white/10 border-white/20 text-white hover:bg-white/20"
+                  >
+                    Create Account
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -58,6 +98,7 @@ const Index = () => {
               <div className="text-2xl font-bold text-pink-400">AI</div>
               <div className="text-sm">Powered</div>
             </div>
+          </div>
           </div>
         </div>
       </div>
