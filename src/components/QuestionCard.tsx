@@ -3,6 +3,8 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useExaiHints } from '@/hooks/useExaiHints';
 import QuestionExplanation from './QuestionExplanation';
 
 interface Question {
@@ -42,6 +44,8 @@ const QuestionCard = ({
       </Card>
     );
   }
+
+  const { hints, requestHint, resetHints } = useExaiHints();
 
   return (
     <Card className="bg-white/5 border-white/20 text-white mb-6">
@@ -94,6 +98,34 @@ const QuestionCard = ({
             );
           })}
         </div>
+
+        {!showAnswer && (
+          <div className="mt-4 space-y-3">
+            {hints.map((h, i) => (
+              <Alert key={`exai-hint-${i}`}>
+                <AlertTitle>Exai hint {i + 1}</AlertTitle>
+                <AlertDescription>{h}</AlertDescription>
+              </Alert>
+            ))}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  requestHint(
+                    { question: question.question, options: question.options, correct: question.correct, explanation: question.explanation },
+                    selectedAnswer || userAnswer
+                  )
+                }
+                disabled={showAnswer}
+              >
+                Exai Hint
+              </Button>
+              {hints.length > 0 && (
+                <Button variant="ghost" onClick={resetHints}>Clear hints</Button>
+              )}
+            </div>
+          </div>
+        )}
 
         {showAnswer && (
           <QuestionExplanation
